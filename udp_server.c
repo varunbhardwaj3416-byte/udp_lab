@@ -46,7 +46,7 @@ int main(){
 	printf("File size : %ld bytes\n" , file_size) ; 
 	}
 	FILE *fp = fopen("udp_transfered_file" , "wb") ; 
-	if(!fp) {
+	/*if(!fp) {
 	printf("File not created\n") ; 
 	}
 	else {
@@ -59,21 +59,31 @@ int main(){
 		}
 		fwrite(buffer , 1 , len , fp) ; 
 		}
-	}
+	}*/
 
 	// ---------------- PHASE 2: ACK-BASED RELIABILITY ----------------
 	// TODO: send ACK after receiving each packet
-
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	DataPacket file_data_packet ; 
+	recv_from = recvfrom(sockfd , &file_data_packet , sizeof(file_data_packet) , 0 , (struct sockaddr *)&client_addr , &client_len) ;
+	if(recv_from < 0) {
+	perror("Not recieved") ; 
+	return 1 ; 
+	}
+	else {
+	// send ack packet 
+	AckPacket ack_packet ; 
+	ack_packet.ack_no = htonl(1) ; 
+	int send_to = sendto(sockfd , &ack_packet , sizeof(ack_packet) , 0 , (struct sockaddr*)&client_addr , sizeof(client_addr)) ; 
+	if(send_to < 0) {
+		perror("Acknowledgement not sent ") ; 
+		return 1 ; 
+	}
+	else{
+	printf("Acknowledgement sent\n") ; 
+	fwrite(file_data_packet.buffer , 1 , file_data_packet.data_len , fp) ;  
+	}
+	}
 	
 	fclose(fp) ; 
 	close(sockfd) ; 
