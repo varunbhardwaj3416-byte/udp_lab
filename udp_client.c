@@ -127,8 +127,9 @@ int main(){
 	DataPacket file_data_packet ; 
 	file_data_packet.data_len = fread(file_data_packet.buffer , 1 , BUFFER_SIZE , fp) ; 
 	if(file_data_packet.data_len == 0){
-		// end of file 
+		printf("ACK received for Final Packet\n") ; 
 		break ; 
+		// end of file 
 	}
 	if(file_data_packet.data_len < BUFFER_SIZE) {
 	file_data_packet.is_end = htonl(1) ; // end of file  
@@ -175,11 +176,6 @@ int main(){
 			packet_number = current_packet ; 
 			}
 			printf("ACK received for Packet #%u\n", ack_no);
-			if(ack_no == current_packet && ntohl(file_data_packet.is_end) == 1) {
-			printf("Acknowledgement for final packet received.\n") ; 
-			// get out of loop 
-			break;
-			}
 		}
 	
 	}
@@ -195,7 +191,8 @@ int main(){
 		break ; 
 	}
 	}
-	}	 
+	}
+
 	close(sockfd) ; 
 	fclose(fp) ; 
 	printf("File transfered. \n") ; 
