@@ -42,8 +42,16 @@ int main(){
 	}
 	else {
 		AckPacket ack_packet ; 
-		printf("Client want's to send a file\n") ;  
-		printf("Enter 1 for Yes or 2 for No : \n") ; 
+		printf("\n=====================================\n");
+		printf("   File Transfer Request Received\n");
+		printf("=====================================\n");
+
+		printf("Client wants to send a file.\n");
+		printf("Do you want to accept it?\n");
+		printf("Enter 1 for Yes\n");
+		printf("Enter 2 for No\n");
+		printf("Your choice: ");
+
 		int choice ; 
 		scanf("%d" , &choice) ; 
 		if(choice == 2) {
