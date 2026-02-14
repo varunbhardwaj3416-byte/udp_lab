@@ -42,16 +42,17 @@ int main(){
 	handshake handshake_packet ; 
 	handshake_packet.decision = htonl(1) ; // 1 = want to transfer the file
 	// handshake request sent 
-	fd_set readfd ; 
-	FD_ZERO(&readfd) ; 
-	FD_SET(sockfd , &readfd) ;  
-	struct timeval ackTime ; 
-	ackTime.tv_sec = 30 ; 
-	ackTime.tv_usec = 0 ; 
 	while(1){
 	if(sendto(sockfd , &handshake_packet , sizeof(handshake_packet) , 0 , (struct sockaddr *)&server_addr , sizeof(server_addr)) > 0){
+		fd_set readfd ; 
+		FD_ZERO(&readfd) ; 
+		FD_SET(sockfd , &readfd) ;  
+		struct timeval ackTime ; 
+		ackTime.tv_sec = 3 ; 
+		ackTime.tv_usec = 0 ; 
 		int handshake_ack = select(sockfd + 1 , &readfd , NULL , NULL , &ackTime) ; 
 			if(handshake_ack > 0){
+					printf("ack > 0 \n") ; 
 				int recv_ack_packet = recvfrom(sockfd , &handshake_packet , sizeof(handshake_packet) , 0 , (struct sockaddr *)&server_addr , &server_size) ; // recv packet 
 				if(recv_ack_packet > 0) break ;  
 			}
@@ -61,10 +62,30 @@ int main(){
 	printf("Handshaking rejected\n") ; 
 	return 1 ; 
 	}
-	sleep(5) ;
-
-
-	sendto(sockfd , fileName , strlen(fileName) + 1 , 0 , (struct sockaddr *)&server_addr , sizeof(server_addr)) ; 
+	sleep(6) ;
+// same logic for sending filename 
+	while(1){
+	if(sendto(sockfd , fileName , strlen(fileName) + 1 , 0 , (struct sockaddr *)&server_addr , sizeof(server_addr)) > 0) {
+		//wait for ack 
+		fd_set readfd ; 
+		struct timeval ackTime ; 
+		FD_ZERO(&readfd) ; 
+		FD_SET(sockfd , &readfd) ; 
+		ackTime.tv_sec = 1 ; 
+		ackTime.tv_usec = 0 ; 
+		int ack = select(sockfd + 1 , &readfd , NULL , NULL , &ackTime) ;
+		if(ack > 0){
+			// server will send ack for receiveing file name
+			handshake h_packet ; 
+			int recv_from = recvfrom(sockfd , &h_packet , sizeof(h_packet) , 0 , (struct sockaddr *)&server_addr , &server_size) ;
+			if(recv_from > 0 && ntohl(h_packet.decision) == 1) {
+			// handshake done 
+			break ; 
+			} 
+		}  
+	}
+	}
+	sleep(6) ; 
 	// send file size 
 	FILE * fp = fopen(fileName , "rb") ; 
 	if(!fp){
@@ -72,12 +93,34 @@ int main(){
 	return 1 ; 
 	}
 	fseek(fp , 0 , SEEK_END) ; 
-	long file_size = ftell(fp) ; 
+	uint32_t file_size = htonl(ftell(fp)) ;
 	fseek(fp , 0 , SEEK_SET) ; 
+	int ack = 1 ; 
+	while(ack > 0) {
+	if(sendto(sockfd , &file_size , sizeof(file_size) , 0 , (struct sockaddr *)&server_addr , sizeof(server_addr)) > 0) {
+		//wait for ack 
+		fd_set readfd ; 
+		struct timeval ackTime ; 
+		FD_ZERO(&readfd) ; 
+		FD_SET(sockfd , &readfd) ; 
+		ackTime.tv_sec = 1 ; 
+		ackTime.tv_usec = 0 ; 
+		int ack = select(sockfd + 1 , &readfd , NULL , NULL , &ackTime) ;
+		if(ack > 0){
+			// server will send ack for receiveing file name
+			handshake h_packet ; 
+			int recv_from = recvfrom(sockfd , &h_packet , sizeof(h_packet) , 0 , (struct sockaddr *)&server_addr , &server_size) ;
+			if(recv_from > 0 && ntohl(h_packet.decision) == 1) {
+			// handshake done 
+			break ; 
+			} 
+		}  
+	}
+	}
+	sleep(6) ; 
 	printf("\nStarting file transfer...\n");
 	printf("----------------------------------\n");
 
-	sendto(sockfd , &file_size , sizeof(file_size) , 0 , (struct sockaddr *)&server_addr , sizeof(server_addr)) ; 
 	// bind client address to socket 
 	
 	// sending file content 
@@ -133,12 +176,12 @@ int main(){
 	}
 	if(file_data_packet.data_len < BUFFER_SIZE) {
 	file_data_packet.is_end = htonl(1) ; // end of file  
-	current_packet = packet_number + 1;
+	current_packet += 1;
 	file_data_packet.seq_no = htonl(current_packet);
 
 	}
 	else{
-	current_packet = packet_number + 1;
+	current_packet += 1;
 	file_data_packet.seq_no = htonl(current_packet);
 	file_data_packet.is_end = htonl(0) ; 
 	}
@@ -166,7 +209,8 @@ int main(){
 		if(recv_from < 0) {
 			perror("error :") ; 
 			// resend the packet 
-			fseek(fp , packet_number * BUFFER_SIZE , SEEK_SET) ; 
+			current_packet -= 1 ; 
+			fseek(fp , current_packet * BUFFER_SIZE , SEEK_SET) ; 
 			continue ; 
 		}
 		else {
@@ -175,15 +219,20 @@ int main(){
 			if(ack_no == current_packet){
 			packet_number = current_packet ; 
 			}
-			printf("ACK received for Packet #%u\n", ack_no);
+			printf("ACK received for Packet %u\n", ack_no);
+			if(ack_no == current_packet && ntohl(file_data_packet.is_end) == 1){
+			// final ack received 
+			printf("ACK for Final Packet received \n") ; 
+			break ; 
+			}
 		}
 	
 	}
 	else if(ack_came == 0){ // ack did not come send the packet again 
 		printf("Timeout. Sending packet again.\n") ; 
-		packet_number -= 1 ;
+		current_packet -= 1 ;
 		fseek(fp , 0 , SEEK_SET) ;
-		fseek(fp ,packet_number * BUFFER_SIZE , SEEK_SET) ;  
+		fseek(fp , current_packet * BUFFER_SIZE , SEEK_SET) ;  
 		continue ; 
 	}
 	else {
