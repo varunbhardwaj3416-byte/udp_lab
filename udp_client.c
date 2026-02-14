@@ -244,6 +244,7 @@ int main(){
 	close(sockfd) ; 
 	fclose(fp) ; 
 	printf("File transfered. \n") ; 
+	printf("Program terminated. \n") ; 
 	return 0 ; 
  
 }
