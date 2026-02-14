@@ -1,64 +1,124 @@
-UDP File Transfer – Phase 1 (Baseline Implementation)
-Overview
+# UDP File Transfer System
 
-This project implements a basic UDP-based file transfer system as an initial phase toward building a reliable data transfer protocol over UDP. The current implementation focuses on transmitting file data using UDP sockets without acknowledgments, retransmission, or flow control, in order to study the inherent limitations of UDP.
+## Overview
 
-Current Functionality
+This project implements a UDP-based file transfer system as part of a phased approach toward building a reliable data transfer protocol over UDP.
 
-File transfer using UDP sockets
+The initial phase focuses on understanding the limitations of raw UDP communication by transmitting files without built-in reliability mechanisms. Subsequent improvements introduce acknowledgment-based reliability and packet loss handling.
 
-Chunk-based transmission of file data
+The system successfully demonstrates reliable file delivery using ARQ mechanisms under simulated packet loss conditions.
 
-Receiver writes incoming data directly to file
+---
 
-No acknowledgment (ACK) mechanism
+## Project Objectives
 
-No retransmission or sequencing
+- Understand the behavior of UDP in file transfer
+- Analyze packet loss and its impact on data integrity
+- Implement reliability mechanisms over UDP
+- Ensure correct file delivery under adverse network conditions
 
-No congestion or flow control
+---
+
+## Phase 1: Baseline UDP Implementation
+
+### Description
+
+This phase implements a basic UDP file transfer system without reliability support. It is designed to study the inherent limitations of UDP.
+
+### Functionality
+
+- File transfer using UDP sockets
+- Chunk-based data transmission
+- Direct writing of received data to file
+- No acknowledgments (ACK)
+- No retransmission
+- No sequencing
+- No congestion control
 
 This phase demonstrates raw UDP behavior during file transmission.
 
-Packet Loss Observation
+---
 
-Since UDP is a connectionless and unreliable protocol, it does not guarantee packet delivery, ordering, or duplication avoidance. To demonstrate this limitation, packet loss was simulated at the operating system level using Linux Traffic Control (tc netem).
+## Packet Loss Analysis
 
-Packet loss was introduced on the loopback interface during large file transfers. Under these conditions, the receiver obtained incomplete or corrupted files, while the sender remained unaware of the loss. This occurred because UDP provides no built-in feedback mechanism to detect missing packets.
+Since UDP is a connectionless and unreliable protocol, it does not guarantee:
 
-File integrity was verified using cryptographic hash comparison, which confirmed data loss when packet loss was present.
+- Packet delivery
+- Packet ordering
+- Duplicate avoidance
 
-Key Observation
+To demonstrate this limitation, packet loss was simulated using Linux Traffic Control (`tc netem`).
 
-UDP silently drops packets when loss occurs.
+### Simulation Details
 
-The sender does not receive any error or indication of missing data.
+- Packet loss introduced on the loopback interface
+- Large file transfers performed under loss conditions
+- No feedback provided to sender on packet loss
 
-Large file transfers are especially vulnerable without reliability mechanisms.
+### Observations
 
-Packet loss can occur even on localhost and does not depend on Wi-Fi or internet instability.
+- Incomplete or corrupted files were received
+- Sender remained unaware of lost packets
+- No automatic recovery occurred
+- File integrity verification confirmed data loss
 
-This experiment establishes the need for reliability mechanisms such as acknowledgments and retransmissions.
+### Key Findings
 
-Scope of This Phase
+- UDP silently drops packets
+- No built-in error detection
+- No delivery guarantees
+- Packet loss can occur even on localhost
+- Reliability is essential for large file transfers
 
-This phase is intentionally limited to:
+This experiment establishes the need for reliability mechanisms.
 
-Demonstrating UDP file transfer
+---
 
-Observing packet loss behavior
+## Phase 2: Reliable UDP Transfer (ARQ Implementation)
 
-Establishing motivation for reliability design
+### Description
 
-No attempt is made in this phase to correct or recover lost packets.
+In this phase, reliability was added using Automatic Repeat reQuest (ARQ) techniques.
 
-Future Work
+### Achievements
 
-Subsequent phases will extend this implementation to include:
+- Custom packet format implementation
+- Handshake protocol for connection setup
+- Sequence numbering
+- Acknowledgment (ACK) mechanism
+- Timeout-based retransmission
+- Packet loss detection
+- Guaranteed file delivery
 
-Packet sequencing
+### Result
 
-Acknowledgment (ACK) mechanisms
+The system successfully transfers files under packet loss conditions while ensuring correctness and completeness.
 
-Timeout and retransmission logic
+This confirms the effectiveness of ARQ-based reliability over UDP.
 
+---
 
+## Verification and Testing
+
+- Packet loss simulated using `tc netem`
+- File integrity verified using hash comparison
+- Multiple test cases with different loss rates
+- Successful recovery from packet loss
+
+---
+
+## Requirements
+
+- GCC Compiler
+- Linux / Ubuntu
+- POSIX Sockets
+- Traffic Control (`tc`) for simulation
+
+---
+
+## Compilation
+
+Compile the server:
+
+```bash
+gcc udp_server.c -o udp_server
