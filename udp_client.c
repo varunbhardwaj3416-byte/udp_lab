@@ -52,7 +52,6 @@ int main(){
 		ackTime.tv_usec = 0 ; 
 		int handshake_ack = select(sockfd + 1 , &readfd , NULL , NULL , &ackTime) ; 
 			if(handshake_ack > 0){
-					printf("ack > 0 \n") ; 
 				int recv_ack_packet = recvfrom(sockfd , &handshake_packet , sizeof(handshake_packet) , 0 , (struct sockaddr *)&server_addr , &server_size) ; // recv packet 
 				if(recv_ack_packet > 0) break ;  
 			}
@@ -95,8 +94,8 @@ int main(){
 	fseek(fp , 0 , SEEK_END) ; 
 	uint32_t file_size = htonl(ftell(fp)) ;
 	fseek(fp , 0 , SEEK_SET) ; 
-	int ack = 1 ; 
-	while(ack > 0) {
+	int ack  ; 
+	while(1) {
 	if(sendto(sockfd , &file_size , sizeof(file_size) , 0 , (struct sockaddr *)&server_addr , sizeof(server_addr)) > 0) {
 		//wait for ack 
 		fd_set readfd ; 
